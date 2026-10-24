@@ -887,6 +887,11 @@
 		E9DFD295D467717BFB7FFCBD /* Release-Direct */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEPLOYMENT_POSTPROCESSING = YES;
+				OTHER_CFLAGS = "$(inherited) \"-ffile-prefix-map=$(SRCROOT)=.\"";
+				OTHER_SWIFT_FLAGS = "$(inherited) -file-prefix-map \"$(SRCROOT)=.\"";
+				STRIP_STYLE = all;
 				ASSETCATALOG_COMPILER_OPTIMIZATION = space;
 				DEAD_CODE_STRIPPING = YES;
 				LLVM_LTO = YES;

@@ -4,13 +4,19 @@ Hide menu bar icons behind a wall. Click the arrow to show them, click again to 
 
 Made by protowaldganger.
 
+## Install
+
+1. Download `HadriansWall.zip` from [Releases](../../releases/latest), unzip it and drag Hadrian's Wall into Applications.
+2. Open it. macOS warns that it cannot verify the developer, because the app is not notarized. Open System Settings › Privacy & Security, scroll down and click Open Anyway.
+3. On macOS 27, allow Accessibility when asked. It is how the app sees where your icons sit.
+
 ## Use
 
 - ⌘-drag icons left of the arrow to hide them, right of it to keep them.
 - Click the arrow to show or hide. Right-click it for Settings.
 - ⌥-click the arrow to reveal the always-hidden section, when it is on.
 
-On macOS 27 the app needs Accessibility access and has to run from /Applications.
+The app has to run from /Applications.
 
 ## Build
 
