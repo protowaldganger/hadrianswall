@@ -20,20 +20,6 @@
                ReferencedContainer = "container:HadriansWall.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B6ED1C7FB7AE7D98FD4143B2"
-               BuildableName = "OverflowTests.xctest"
-               BlueprintName = "OverflowTests"
-               ReferencedContainer = "container:HadriansWall.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -49,16 +35,6 @@
                BlueprintIdentifier = "38276456C8B72E6FF49DF8FB"
                BuildableName = "WallTests.xctest"
                BlueprintName = "WallTests"
-               ReferencedContainer = "container:HadriansWall.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B6ED1C7FB7AE7D98FD4143B2"
-               BuildableName = "OverflowTests.xctest"
-               BlueprintName = "OverflowTests"
                ReferencedContainer = "container:HadriansWall.xcodeproj">
             </BuildableReference>
          </TestableReference>

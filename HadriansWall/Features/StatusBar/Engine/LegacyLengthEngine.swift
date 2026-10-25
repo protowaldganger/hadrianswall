@@ -61,6 +61,8 @@ final class LegacyLengthEngine: MenuBarEngine {
         return MenuBarOrder.isItem(items?.separatorItem, onHiddenSideOf: items?.toggleItem)
     }
 
+    var hiddenAppCount: Int? { nil }
+
     var isAlwaysHiddenSeparatorPlaced: Bool {
         return MenuBarOrder.isItem(items?.alwaysHiddenItem, onHiddenSideOf: items?.separatorItem)
     }

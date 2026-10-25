@@ -56,19 +56,54 @@ final class NativeVisibilityEngine: MenuBarEngine {
     private var alwaysHiddenEnabled = false
     private var alwaysHiddenSeparatorHidden = false
 
+    private let newIconPolicy: NewIconPolicy?
+    // Apps launched while collapsed that the policy wants visible. They are not
+    // in the cached layout yet, so they are allowed on top of it until the next
+    // read from an unrestricted bar places them properly.
+    private var launchedWhileCollapsed: Set<String> = []
+    private var launchObserver: NSObjectProtocol?
+
     init(items: MenuBarItemProvider,
          inventory: MenuBarInventoryProviding = AccessibilityMenuBarInventory(),
          visibility: NativeVisibilityProviding = NativeVisibilityBridge(),
          ownBundleIdentifier: String? = Bundle.main.bundleIdentifier,
          itemFrame: @escaping (NSStatusItem) -> CGRect? = { $0.button?.window?.frame },
-         isLTR: @escaping () -> Bool = { Constant.isUsingLTRLanguage }) {
+         isLTR: @escaping () -> Bool = { Constant.isUsingLTRLanguage },
+         newIconPolicy: NewIconPolicy? = nil) {
         self.items = items
         self.inventory = inventory
         self.visibility = visibility
         self.ownBundleIdentifier = ownBundleIdentifier
         self.itemFrame = itemFrame
         self.isLTR = isLTR
+        self.newIconPolicy = newIconPolicy
         items.separatorItem.isVisible = false
+        if newIconPolicy != nil {
+            launchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { [weak self] note in
+                self?.applicationLaunched(note)
+            }
+        }
+    }
+
+    deinit {
+        if let launchObserver { NSWorkspace.shared.notificationCenter.removeObserver(launchObserver) }
+    }
+
+    var hiddenAppCount: Int? {
+        layout.map { $0.bundles(in: [.hidden, .alwaysHidden]).count }
+    }
+
+    // A new app while collapsed: let it show if new icons should, without
+    // waiting for the next collapse.
+    private func applicationLaunched(_ note: Notification) {
+        guard state == .collapsed, let policy = newIconPolicy, policy.showsNewIcons(),
+              let layout,
+              let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+              let bundle = app.bundleIdentifier, bundle != ownBundleIdentifier,
+              !policy.isKnown(bundle) else { return }
+        launchedWhileCollapsed.insert(bundle)
+        activate(allowing: layout.bundles(in: [.visible]) + launchedWhileCollapsed.sorted()) { _ in }
     }
 
     func collapse(completion: @escaping (CollapseResult) -> Void) {
@@ -117,6 +152,7 @@ final class NativeVisibilityEngine: MenuBarEngine {
 
     func expand() {
         setSeparatorsVisible(true)
+        launchedWhileCollapsed = []
         state = .expanded
         applyExpandedPresentation()
     }
@@ -171,11 +207,13 @@ final class NativeVisibilityEngine: MenuBarEngine {
         let generation = self.generation
         inventory.snapshot { [weak self] inventory in
             guard let self = self, generation == self.generation else { return }
-            let layout = MenuBarLayoutResolver.resolve(inventory: inventory,
+            let resolved = MenuBarLayoutResolver.resolve(inventory: inventory,
                                                        separatorFrame: boundary,
                                                        alwaysHiddenSeparatorFrame: alwaysHiddenFrame,
                                                        isLTR: isLTR,
                                                        excludingBundle: self.ownBundleIdentifier)
+            let layout = self.newIconPolicy?.apply(to: resolved) ?? resolved
+            self.launchedWhileCollapsed = []
             NSLog("NativeVisibility: arrow at x=\(boundary.midX); visible \(layout.bundles(in: [.visible])), hidden \(layout.bundles(in: [.hidden])), always hidden \(layout.bundles(in: [.alwaysHidden]))")
             self.layout = layout
             body(layout)

@@ -60,13 +60,20 @@ enum Preferences {
         set { store(newValue, for: Key.hoverToExpand) }
     }
 
-    static var useFullStatusBarOnExpandEnabled: Bool {
-        get { defaults.bool(forKey: Key.useFullStatusBarOnExpandEnabled) }
-        set { store(newValue, for: Key.useFullStatusBarOnExpandEnabled) }
+    // Whether apps Hadrian's Wall has not seen before start out visible
+    // (macOS 27). Off means they land where macOS puts them: the hidden side.
+    static var newIconsVisible: Bool {
+        get { defaults.bool(forKey: Key.newIconsVisible) }
+        set { store(newValue, for: Key.newIconsVisible) }
     }
 
-    static var notchOverflowEnabled: Bool {
-        get { defaults.bool(forKey: Key.notchOverflowEnabled) }
-        set { store(newValue, for: Key.notchOverflowEnabled) }
+    // Set once a collapse has hidden at least one app; the last step of the
+    // first-run checklist.
+    static var hasHiddenIcons: Bool {
+        get { defaults.bool(forKey: Key.hasHiddenIcons) }
+        set {
+            guard newValue != hasHiddenIcons else { return }
+            store(newValue, for: Key.hasHiddenIcons)
+        }
     }
 }

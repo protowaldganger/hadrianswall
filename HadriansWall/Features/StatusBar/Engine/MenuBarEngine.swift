@@ -25,6 +25,10 @@ protocol MenuBarEngine: AnyObject {
     // Whether the always-hidden separator sits beyond the regular hidden section.
     var isAlwaysHiddenSeparatorPlaced: Bool { get }
 
+    // How many apps the last collapse hid, when the engine can tell (macOS 27);
+    // nil when it cannot (the widening engine hides whatever lies past it).
+    var hiddenAppCount: Int? { get }
+
     // Display geometry changed. Re-applies the collapse to the live items when
     // collapsed, so a hot-plug does not leave a stale length behind.
     func invalidateLayout()

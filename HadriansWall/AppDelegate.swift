@@ -27,13 +27,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // call, so the defaults are testable without creating status items.
     static let defaultPreferenceValues: [String: Any] = [
         UserDefaults.Key.isAutoStart: false,
-        UserDefaults.Key.isShowPreference: true,
+        UserDefaults.Key.isShowPreference: false,
         UserDefaults.Key.isAutoHide: true,
         UserDefaults.Key.numberOfSecondForAutoHide: 10.0,
         UserDefaults.Key.areSeparatorsHidden: false,
         UserDefaults.Key.alwaysHiddenSectionEnabled: false,
         UserDefaults.Key.hoverToExpand: false,
-        UserDefaults.Key.notchOverflowEnabled: true
+        UserDefaults.Key.newIconsVisible: true,
+        UserDefaults.Key.hasHiddenIcons: false
     ]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -43,7 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AutoStart.apply(enabled: Preferences.isAutoStart)
         statusBarController = StatusBarController()
         applyGlobalKey()
-        if Preferences.isShowPreference {
+        UpdateCheck.shared.startIfEnabled()
+        // Settings opens by itself only while setup is unfinished, on the
+        // checklist, or when the user asked for it at every launch.
+        if !Setup.isComplete {
+            SettingsWindow.show(.menuBar)
+        } else if Preferences.isShowPreference {
             SettingsWindow.show()
         }
     }

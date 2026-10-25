@@ -333,3 +333,49 @@ final class LegacyLengthEngineTests: XCTestCase {
         XCTAssertEqual(items.separatorItem.length, 20)
     }
 }
+
+// MARK: - New icon policy
+
+final class NewIconPolicyTests: XCTestCase {
+    private var stored: Set<String>?
+    private var showsNew = true
+
+    private func policy() -> NewIconPolicy {
+        NewIconPolicy(showsNewIcons: { self.showsNew },
+                      load: { self.stored },
+                      save: { self.stored = $0 })
+    }
+
+    private let arranged = MenuBarLayout(sections: ["com.kept": .visible, "com.tucked": .hidden])
+
+    func testFirstReadOnlyRecordsWhatIsThere() {
+        let result = policy().apply(to: arranged)
+        XCTAssertEqual(result, arranged, "turning the rule on never moves icons already arranged")
+        XCTAssertEqual(stored, ["com.kept", "com.tucked"])
+    }
+
+    func testNewAppStartsVisibleWhenAsked() {
+        stored = ["com.kept", "com.tucked"]
+        var layout = arranged
+        layout.sections["com.new"] = .hidden
+        let result = policy().apply(to: layout)
+        XCTAssertEqual(result.sections["com.new"], .visible)
+        XCTAssertEqual(result.sections["com.tucked"], .hidden, "known apps keep their place")
+        XCTAssertEqual(stored, ["com.kept", "com.tucked", "com.new"])
+    }
+
+    func testNewAppStaysWhereMacOSPutItWhenHiddenIsChosen() {
+        stored = ["com.kept", "com.tucked"]
+        showsNew = false
+        var layout = arranged
+        layout.sections["com.new"] = .hidden
+        XCTAssertEqual(policy().apply(to: layout).sections["com.new"], .hidden)
+    }
+
+    func testOnceSeenPositionDecides() {
+        stored = ["com.kept", "com.tucked", "com.new"]
+        var layout = arranged
+        layout.sections["com.new"] = .hidden
+        XCTAssertEqual(policy().apply(to: layout).sections["com.new"], .hidden)
+    }
+}

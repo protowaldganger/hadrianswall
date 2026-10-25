@@ -46,6 +46,49 @@ struct MenuBarLayout: Equatable {
     }
 }
 
+// Where icons of apps Hadrian's Wall has never seen before go. macOS puts a new
+// app's icons at the far end of the bar, which is the hidden side, so without
+// this every newly installed app would start out hidden.
+//
+// An app counts as seen once a layout read finds it; from then on its position
+// decides. The very first read only records what is there, so turning this on
+// never moves icons the user already arranged.
+final class NewIconPolicy {
+    let showsNewIcons: () -> Bool
+    private let load: () -> Set<String>?
+    private let save: (Set<String>) -> Void
+
+    init(showsNewIcons: @escaping () -> Bool,
+         load: @escaping () -> Set<String>?,
+         save: @escaping (Set<String>) -> Void) {
+        self.showsNewIcons = showsNewIcons
+        self.load = load
+        self.save = save
+    }
+
+    func isKnown(_ bundle: String) -> Bool {
+        load()?.contains(bundle) ?? true
+    }
+
+    func apply(to layout: MenuBarLayout) -> MenuBarLayout {
+        let present = Set(layout.sections.keys)
+        guard let known = load() else {
+            save(present)
+            return layout
+        }
+        var adjusted = layout
+        if showsNewIcons() {
+            for bundle in present.subtracting(known) {
+                adjusted.sections[bundle] = .visible
+            }
+        }
+        if !present.isSubset(of: known) {
+            save(known.union(present))
+        }
+        return adjusted
+    }
+}
+
 enum MenuBarLayoutResolver {
     // Bundles whose items are macOS's own controls (clock, Wi-Fi, Control Center...).
     // They cannot be hidden by bundle, so they are left out of the layout and kept

@@ -20,7 +20,6 @@ final class StatusBarController: MenuBarItemProvider {
     var alwaysHiddenItem: NSStatusItem? { alwaysHidden }
 
     private lazy var engine: MenuBarEngine = MenuBarEngineFactory.make(items: self)
-    private let notchOverflow = NotchOverflowController()
     private let lineImage = NSImage(named: "ic_line")
 
     // MARK: - State
@@ -124,10 +123,6 @@ final class StatusBarController: MenuBarItemProvider {
     private func showContextMenu(from button: NSStatusBarButton) {
         let menu = NSMenu()
 
-        if NotchOverflowController.hasNotch && Preferences.notchOverflowEnabled {
-            menu.addItem(item("Show Notch Items", #selector(showNotchOverflow)))
-            menu.addItem(.separator())
-        }
         menu.addItem(item("Settings…", #selector(openSettings), key: ","))
         menu.addItem(item(Preferences.isAutoHide ? "Disable Auto Collapse" : "Enable Auto Collapse",
                           #selector(toggleAutoHide), key: "t"))
@@ -145,7 +140,6 @@ final class StatusBarController: MenuBarItemProvider {
 
     @objc private func openSettings() { SettingsWindow.show() }
     @objc private func toggleAutoHide() { Preferences.isAutoHide.toggle() }
-    @objc private func showNotchOverflow() { notchOverflow.showOverflowMenuFromSeparator(near: toggle) }
 
     // MARK: - Collapse / expand
 
@@ -166,14 +160,9 @@ final class StatusBarController: MenuBarItemProvider {
         engine.collapse { [weak self] result in
             guard let self else { return }
             self.updateArrow()
-            guard Preferences.useFullStatusBarOnExpandEnabled else { return }
-            switch result {
-            case .collapsed:
-                NSApp.setActivationPolicy(.accessory)
-                NSApp.deactivate()
-            case .unavailable:
-                // Nothing was hidden: keep the app as it was while expanded.
-                NSApp.setActivationPolicy(.regular)
+            // The first-run checklist's last step: something actually hid.
+            if result == .collapsed, (self.engine.hiddenAppCount ?? 1) > 0 {
+                Preferences.hasHiddenIcons = true
             }
         }
     }
@@ -183,10 +172,6 @@ final class StatusBarController: MenuBarItemProvider {
         engine.expand()
         updateArrow()
         scheduleAutoCollapse()
-        if Preferences.useFullStatusBarOnExpandEnabled {
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: true)
-        }
     }
 
     // MARK: - Separators and the always-hidden section

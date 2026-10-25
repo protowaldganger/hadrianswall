@@ -19,6 +19,7 @@ enum SettingsWindow {
         let window = self.window ?? makeWindow()
         self.window = window
         model.refresh()
+        model.startPolling()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -37,8 +38,11 @@ enum SettingsWindow {
         window.setContentSize(SettingsView.size)
         window.center()
         window.setFrameAutosaveName("WallSettings")
+        // The saved frame keeps its place but not an older, smaller size.
+        window.setContentSize(SettingsView.size)
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
             SettingsWindow.model.stopRecording()
+            SettingsWindow.model.stopPolling()
         }
         return window
     }
@@ -117,6 +121,51 @@ enum HidingStatus: Equatable {
     }
 }
 
+// The first-run checklist. On macOS 27 hiding needs the app in /Applications
+// and Accessibility access; everywhere, setup is done once something has hidden.
+// Each step is read live, so it ticks itself off as soon as it is true.
+enum Setup {
+    struct Step: Identifiable {
+        let id: Int
+        let title: String
+        let detail: String
+        let done: Bool
+        var actionTitle: String? = nil
+        var action: (() -> Void)? = nil
+    }
+
+    static var steps: [Step] {
+        let status = HidingStatus.current
+        // Without the native mechanism there is nothing to set up; the status
+        // card explains instead.
+        if status == .unavailable { return [] }
+        var steps: [Step] = []
+        if status.arrowIsBoundary {
+            steps.append(Step(id: 0,
+                              title: "Move to Applications".localized,
+                              detail: "Run from anywhere else, macOS hides the arrow.".localized,
+                              done: Bundle.main.bundlePath.hasPrefix("/Applications/"),
+                              actionTitle: "Show in Finder".localized,
+                              action: { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }))
+            steps.append(Step(id: 1,
+                              title: "Allow Accessibility".localized,
+                              detail: "So Hadrian's Wall can see where your icons sit.".localized,
+                              done: AXIsProcessTrusted(),
+                              actionTitle: "Allow…".localized,
+                              action: HidingStatus.openAccessibilitySettings))
+        }
+        steps.append(Step(id: 2,
+                          title: "Hide your first icon".localized,
+                          detail: (status.arrowIsBoundary
+                                   ? "⌘-drag an icon left of the arrow, then click the arrow."
+                                   : "⌘-drag an icon left of the divider, then click the arrow.").localized,
+                          done: Preferences.hasHiddenIcons))
+        return steps
+    }
+
+    static var isComplete: Bool { steps.allSatisfy(\.done) }
+}
+
 // View state. Settings themselves live in Preferences; this only tells SwiftUI
 // to redraw when they change, wherever the change came from.
 final class SettingsModel: ObservableObject {
@@ -126,6 +175,7 @@ final class SettingsModel: ObservableObject {
 
     private var keyMonitor: Any?
     private var observers: [NSObjectProtocol] = []
+    private var poll: Timer?
 
     init() {
         let center = NotificationCenter.default
@@ -142,6 +192,25 @@ final class SettingsModel: ObservableObject {
     func refresh() {
         status = HidingStatus.current
         objectWillChange.send()
+    }
+
+    // Accessibility can be granted in System Settings without this app ever
+    // becoming active, so while the window is open and setup is unfinished,
+    // look again every second.
+    func startPolling() {
+        guard poll == nil, !Setup.isComplete else { return }
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            self?.refresh()
+            if Setup.isComplete { self?.stopPolling() }
+        }
+        timer.tolerance = 0.3
+        RunLoop.main.add(timer, forMode: .common)
+        poll = timer
+    }
+
+    func stopPolling() {
+        poll?.invalidate()
+        poll = nil
     }
 
     // MARK: Shortcut recording
