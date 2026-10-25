@@ -214,7 +214,6 @@ final class NativeVisibilityEngine: MenuBarEngine {
                                                        excludingBundle: self.ownBundleIdentifier)
             let layout = self.newIconPolicy?.apply(to: resolved) ?? resolved
             self.launchedWhileCollapsed = []
-            NSLog("NativeVisibility: arrow at x=\(boundary.midX); visible \(layout.bundles(in: [.visible])), hidden \(layout.bundles(in: [.hidden])), always hidden \(layout.bundles(in: [.alwaysHidden]))")
             self.layout = layout
             body(layout)
         }

@@ -64,9 +64,9 @@ struct SettingsView: View {
             Spacer()
             HStack(spacing: 6) {
                 Circle()
-                    .fill(model.status.isWorking && Setup.isComplete ? Color.green : Color.orange)
+                    .fill(model.status.isWorking && model.setupComplete ? Color.green : Color.orange)
                     .frame(width: 6, height: 6)
-                Text(Setup.isComplete ? model.status.title : "Finish setting up".localized)
+                Text(model.setupComplete ? model.status.title : "Finish setting up")
                     .font(Style.detail)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -145,28 +145,28 @@ private struct GeneralPane: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Row("Open at login".localized) {
+            Row("Open at login") {
                 Switch(pref({ Preferences.isAutoStart }, { Preferences.isAutoStart = $0 }))
             }
-            Row("Collapse automatically".localized,
-                detail: "Waits while the pointer is in the menu bar.".localized) {
+            Row("Collapse automatically",
+                detail: "Waits while the pointer is in the menu bar.") {
                 Switch(pref({ Preferences.isAutoHide }, { Preferences.isAutoHide = $0 }))
             }
             if Preferences.isAutoHide {
-                Row("After".localized) {
+                Row("After") {
                     Chips(options: Self.delays,
                           selection: pref({ Preferences.numberOfSecondForAutoHide }, { Preferences.numberOfSecondForAutoHide = $0 }))
                 }
             }
-            Row("Expand on hover".localized,
-                detail: "Rest the pointer in the menu bar for half a second.".localized) {
+            Row("Expand on hover",
+                detail: "Rest the pointer in the menu bar for half a second.") {
                 Switch(pref({ Preferences.hoverToExpand }, { Preferences.hoverToExpand = $0 }))
             }
-            Row("Show Settings at launch".localized) {
+            Row("Show Settings at launch") {
                 Switch(pref({ Preferences.isShowPreference }, { Preferences.isShowPreference = $0 }))
             }
-            Row("Check for updates".localized,
-                detail: "Once a day, asks GitHub for the newest release. Nothing else is sent.".localized,
+            Row("Check for updates",
+                detail: "Once a day, asks GitHub for the newest release. Nothing else is sent.",
                 divider: false) {
                 Switch(Binding(get: { updates.isEnabled }, set: { updates.isEnabled = $0 }))
             }
@@ -187,37 +187,37 @@ private struct MenuBarPane: View {
                            arrowIsBoundary: status.arrowIsBoundary)
                 .padding(.bottom, 12)
             Text(status.arrowIsBoundary
-                 ? "⌘-drag icons left of the arrow to hide them, right of it to keep them.".localized
-                 : "⌘-drag icons left of the divider to hide them, right of it to keep them.".localized)
+                 ? "⌘-drag icons left of the arrow to hide them, right of it to keep them."
+                 : "⌘-drag icons left of the divider to hide them, right of it to keep them.")
                 .font(Style.detail)
                 .foregroundColor(.secondary)
                 .padding(.bottom, 16)
 
-            if !Setup.isComplete {
-                Checklist(steps: Setup.steps)
+            if !model.setupComplete {
+                Checklist(steps: model.steps)
                     .padding(.bottom, 6)
             } else if !status.isWorking {
                 StatusCard(status: status)
                     .padding(.bottom, 6)
             }
 
-            Row("Always-hidden section".localized,
-                detail: "Icons past a second divider stay hidden. ⌥-click the arrow to show them.".localized,
+            Row("Always-hidden section",
+                detail: "Icons past a second divider stay hidden. ⌥-click the arrow to show them.",
                 divider: status.arrowIsBoundary) {
                 Switch(pref({ Preferences.alwaysHiddenSectionEnabled }, { Preferences.alwaysHiddenSectionEnabled = $0 }))
             }
             // Only macOS 27 can decide where a new app's icons go; before
             // that, macOS puts them on the hidden side and nothing can move them.
             if status.arrowIsBoundary {
-                Row("New icons".localized,
-                    detail: "Where icons of newly installed apps start out.".localized,
+                Row("New icons",
+                    detail: "Where icons of newly installed apps start out.",
                     divider: false) {
-                    Chips(options: [(true, "Visible".localized), (false, "Hidden".localized)],
+                    Chips(options: [(true, "Visible"), (false, "Hidden")],
                           selection: pref({ Preferences.newIconsVisible }, { Preferences.newIconsVisible = $0 }))
                 }
             }
         }
-        .animation(Style.slide, value: Setup.isComplete)
+        .animation(Style.slide, value: model.setupComplete)
     }
 }
 
@@ -227,7 +227,7 @@ private struct Checklist: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Set up".localized)
+            Text("Set up")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(.secondary)
                 .padding(.bottom, 8)
@@ -285,10 +285,10 @@ private struct MenuBarDiagram: View {
             Spacer(minLength: 0)
             if !collapsed {
                 if alwaysHidden {
-                    section("Always hidden".localized, icons: ["cloud", "paperplane"], divider: true)
+                    section("Always hidden", icons: ["cloud", "paperplane"], divider: true)
                         .transition(gone)
                 }
-                section("Hidden".localized, icons: ["bolt", "music.note", "drop"], divider: !arrowIsBoundary)
+                section("Hidden", icons: ["bolt", "music.note", "drop"], divider: !arrowIsBoundary)
                     .transition(gone)
             }
             VStack(spacing: 8) {
@@ -302,12 +302,12 @@ private struct MenuBarDiagram: View {
                             .background(Circle().fill(Style.track))
                     }
                     .buttonStyle(.plain)
-                    .help((collapsed ? "Show hidden icons" : "Hide icons").localized)
+                    .help((collapsed ? "Show hidden icons" : "Hide icons"))
                     ForEach(["wifi", "battery.75"], id: \.self) { glyph($0, faded: false) }
                     Text("9:41").font(.system(size: 12, weight: .medium).monospacedDigit())
                 }
                 .frame(height: 30)
-                label("Visible".localized)
+                label("Visible")
             }
         }
         .padding(.horizontal, 12)
@@ -366,7 +366,7 @@ private struct StatusCard: View {
             }
             Spacer(minLength: 8)
             if status == .needsAccessibility {
-                Button("Allow…".localized) { HidingStatus.openAccessibilitySettings() }
+                Button("Allow…") { HidingStatus.openAccessibilitySettings() }
                     .controlSize(.small)
             }
         }
@@ -382,20 +382,20 @@ private struct ShortcutPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Show or hide your icons from anywhere.".localized)
+            Text("Show or hide your icons from anywhere.")
                 .font(Style.body)
                 .foregroundColor(.secondary)
 
             HStack(spacing: 6) {
                 if model.isRecording {
-                    Text("Type a shortcut…".localized)
+                    Text("Type a shortcut…")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(height: 34)
                 } else if let keys = Preferences.globalKey?.keys, !keys.isEmpty {
                     ForEach(Array(keys.enumerated()), id: \.offset) { Keycap(text: $0.element) }
                 } else {
-                    Text("No shortcut".localized)
+                    Text("No shortcut")
                         .font(Style.body)
                         .foregroundColor(.secondary)
                         .frame(height: 34)
@@ -412,15 +412,15 @@ private struct ShortcutPane: View {
             .onTapGesture { model.isRecording ? model.stopRecording() : model.startRecording() }
 
             HStack(spacing: 8) {
-                Button(model.isRecording ? "Cancel".localized : "Record…".localized) {
+                Button(model.isRecording ? "Cancel" : "Record…") {
                     model.isRecording ? model.stopRecording() : model.startRecording()
                 }
                 .keyboardShortcut(.defaultAction)
-                Button("Clear".localized) { model.clearShortcut() }
+                Button("Clear") { model.clearShortcut() }
                     .disabled(Preferences.globalKey == nil)
             }
 
-            Text("Use at least one of ⌃ ⌥ ⇧ ⌘, or an F-key. Esc cancels, Delete clears.".localized)
+            Text("Use at least one of ⌃ ⌥ ⇧ ⌘, or an F-key. Esc cancels, Delete clears.")
                 .font(Style.detail)
                 .foregroundColor(.secondary)
         }
@@ -459,19 +459,19 @@ private struct AboutPane: View {
                     .frame(width: 56, height: 56)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(Constant.appName).font(.system(size: 17, weight: .semibold))
-                    Text("Hide menu bar icons behind a wall.".localized)
+                    Text("Hide menu bar icons behind a wall.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
             }
 
             HStack(spacing: 28) {
-                fact("0", "trackers".localized)
-                fact("0", "dependencies".localized)
-                fact("3", "menu bar items".localized)
+                fact("0", "trackers")
+                fact("0", "dependencies")
+                fact("3", "menu bar items")
             }
 
-            Text("Nothing leaves this Mac unless you turn on Check for updates.".localized)
+            Text("Nothing leaves this Mac unless you turn on Check for updates.")
                 .font(Style.detail)
                 .foregroundColor(.secondary)
         }

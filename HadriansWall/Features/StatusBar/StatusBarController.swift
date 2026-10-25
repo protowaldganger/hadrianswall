@@ -20,7 +20,7 @@ final class StatusBarController: MenuBarItemProvider {
     var alwaysHiddenItem: NSStatusItem? { alwaysHidden }
 
     private lazy var engine: MenuBarEngine = MenuBarEngineFactory.make(items: self)
-    private let lineImage = NSImage(named: "ic_line")
+    private let lineImage = Glyph.divider
 
     // MARK: - State
 
@@ -80,7 +80,7 @@ final class StatusBarController: MenuBarItemProvider {
             button.target = self
             button.action = #selector(separatorPressed(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            button.setAccessibilityLabel("Wall divider".localized)
+            button.setAccessibilityLabel("Wall divider")
         }
         if let button = toggle.button {
             button.target = self
@@ -96,8 +96,8 @@ final class StatusBarController: MenuBarItemProvider {
     private func updateArrow() {
         guard let button = toggle.button else { return }
         let collapsed = isCollapsed
-        button.image = NSImage(named: collapsed == Constant.isUsingLTRLanguage ? "ic_expand" : "ic_collapse")
-        button.setAccessibilityLabel((collapsed ? "Show hidden icons" : "Hide icons").localized)
+        button.image = collapsed == Constant.isUsingLTRLanguage ? Glyph.pointsLeft : Glyph.pointsRight
+        button.setAccessibilityLabel((collapsed ? "Show hidden icons" : "Hide icons"))
     }
 
     // MARK: - Clicks
@@ -127,13 +127,13 @@ final class StatusBarController: MenuBarItemProvider {
         menu.addItem(item(Preferences.isAutoHide ? "Disable Auto Collapse" : "Enable Auto Collapse",
                           #selector(toggleAutoHide), key: "t"))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit".localized, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
         menu.popUp(positioning: nil, at: .zero, in: button)
     }
 
     private func item(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
-        let item = NSMenuItem(title: title.localized, action: action, keyEquivalent: key)
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.target = self
         return item
     }
@@ -206,7 +206,7 @@ final class StatusBarController: MenuBarItemProvider {
         engine.updateAlwaysHiddenSection(enabled: true, separatorHidden: false)
         item.button?.image = lineImage
         item.button?.appearsDisabled = true
-        item.button?.setAccessibilityLabel("Always hidden divider".localized)
+        item.button?.setAccessibilityLabel("Always hidden divider")
         item.autosaveName = "wall_always_hidden"
         item.isVisible = true
     }
@@ -274,5 +274,42 @@ final class StatusBarController: MenuBarItemProvider {
             self.hoverDwellTimer = nil
             if self.isCollapsed && self.isMouseInMenuBar { self.expand() }
         }
+    }
+}
+
+// The three menu bar glyphs, drawn in code so the app ships no image files for
+// them: an arrow each way and the divider. 16 pt templates, so macOS tints them
+// for light, dark and highlighted menu bars.
+private enum Glyph {
+    static let pointsLeft = chevron(pointingLeft: true)
+    static let pointsRight = chevron(pointingLeft: false)
+    static let divider = template { path in
+        path.move(to: NSPoint(x: 8, y: 3.5))
+        path.line(to: NSPoint(x: 8, y: 12.5))
+    }
+
+    private static func chevron(pointingLeft: Bool) -> NSImage {
+        template { path in
+            let tip: CGFloat = pointingLeft ? 4.8 : 11.2
+            let tail: CGFloat = pointingLeft ? 11.2 : 4.8
+            path.move(to: NSPoint(x: tail, y: 2))
+            path.line(to: NSPoint(x: tip, y: 8))
+            path.line(to: NSPoint(x: tail, y: 14))
+        }
+    }
+
+    private static func template(_ draw: @escaping (NSBezierPath) -> Void) -> NSImage {
+        let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { _ in
+            let path = NSBezierPath()
+            path.lineWidth = 2.4
+            path.lineCapStyle = .round
+            path.lineJoinStyle = .round
+            draw(path)
+            NSColor.black.setStroke()
+            path.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
     }
 }

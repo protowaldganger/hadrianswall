@@ -30,16 +30,23 @@ static SEL WallConfigurationInit(void) { return @selector(initWithAllowedSystemI
 static SEL WallActivate(void) { return @selector(activateWithConfiguration:completionHandler:); }
 static SEL WallInvalidate(void) { return @selector(invalidate); }
 
+// Resolved once: the framework cannot appear or vanish while the app runs, and
+// this is asked on every collapse and every Settings refresh.
 BOOL WallNativeVisibilityIsAvailable(void) {
-    if (!dlopen(WallFrameworkPath.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL)) {
-        return NO;
-    }
-    Class configuration = NSClassFromString(WallConfigurationClassName);
-    Class assertion = NSClassFromString(WallAssertionClassName);
-    return configuration && assertion
-        && [configuration instancesRespondToSelector:WallConfigurationInit()]
-        && [assertion instancesRespondToSelector:WallActivate()]
-        && [assertion instancesRespondToSelector:WallInvalidate()];
+    static BOOL available;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        if (!dlopen(WallFrameworkPath.fileSystemRepresentation, RTLD_NOW | RTLD_LOCAL)) {
+            return;
+        }
+        Class configuration = NSClassFromString(WallConfigurationClassName);
+        Class assertion = NSClassFromString(WallAssertionClassName);
+        available = configuration && assertion
+            && [configuration instancesRespondToSelector:WallConfigurationInit()]
+            && [assertion instancesRespondToSelector:WallActivate()]
+            && [assertion instancesRespondToSelector:WallInvalidate()];
+    });
+    return available;
 }
 
 void WallNativeVisibilityActivate(NSArray<NSNumber *> *allowedSystemItems,

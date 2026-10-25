@@ -61,10 +61,10 @@ enum SettingsPane: Int, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "General".localized
-        case .menuBar: return "Menu Bar".localized
-        case .shortcut: return "Shortcut".localized
-        case .about: return "About".localized
+        case .general: return "General"
+        case .menuBar: return "Menu Bar"
+        case .shortcut: return "Shortcut"
+        case .about: return "About"
         }
     }
 
@@ -95,25 +95,25 @@ enum HidingStatus: Equatable {
 
     var title: String {
         switch self {
-        case .widening, .native: return "Hiding is on".localized
-        case .needsAccessibility: return "Needs Accessibility access".localized
-        case .notInApplications: return "Move Hadrian's Wall to Applications".localized
-        case .unavailable: return "Hiding is unavailable".localized
+        case .widening, .native: return "Hiding is on"
+        case .needsAccessibility: return "Needs Accessibility access"
+        case .notInApplications: return "Move Hadrian's Wall to Applications"
+        case .unavailable: return "Hiding is unavailable"
         }
     }
 
     var detail: String {
         switch self {
         case .widening:
-            return "The divider widens to push hidden icons off the bar.".localized
+            return "The divider widens to push hidden icons off the bar."
         case .native:
-            return "macOS hides the icons itself. Apps hide with all their icons.".localized
+            return "macOS hides the icons itself. Apps hide with all their icons."
         case .needsAccessibility:
-            return "Hadrian's Wall reads where your icons sit. Until it can, the bar stays open.".localized
+            return "Hadrian's Wall reads where your icons sit. Until it can, the bar stays open."
         case .notInApplications:
-            return "Run from another folder, macOS hides Hadrian's Wall's own arrow.".localized
+            return "Run from another folder, macOS hides Hadrian's Wall's own arrow."
         case .unavailable:
-            return "This build or macOS version has no way to hide icons. The bar stays open.".localized
+            return "This build or macOS version has no way to hide icons. The bar stays open."
         }
     }
 
@@ -148,23 +148,23 @@ enum Setup {
         var steps: [Step] = []
         if status.arrowIsBoundary {
             steps.append(Step(id: 0,
-                              title: "Move to Applications".localized,
-                              detail: "Run from anywhere else, macOS hides the arrow.".localized,
+                              title: "Move to Applications",
+                              detail: "Run from anywhere else, macOS hides the arrow.",
                               done: Bundle.main.bundlePath.hasPrefix("/Applications/"),
-                              actionTitle: "Show in Finder".localized,
+                              actionTitle: "Show in Finder",
                               action: { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }))
             steps.append(Step(id: 1,
-                              title: "Allow Accessibility".localized,
-                              detail: "So Hadrian's Wall can see where your icons sit.".localized,
+                              title: "Allow Accessibility",
+                              detail: "So Hadrian's Wall can see where your icons sit.",
                               done: AXIsProcessTrusted(),
-                              actionTitle: "Allow…".localized,
+                              actionTitle: "Allow…",
                               action: HidingStatus.openAccessibilitySettings))
         }
         steps.append(Step(id: 2,
-                          title: "Hide your first icon".localized,
+                          title: "Hide your first icon",
                           detail: (status.arrowIsBoundary
                                    ? "⌘-drag an icon left of the arrow, then click the arrow."
-                                   : "⌘-drag an icon left of the divider, then click the arrow.").localized,
+                                   : "⌘-drag an icon left of the divider, then click the arrow."),
                           done: Preferences.hasHiddenIcons))
         return steps
     }
@@ -177,6 +177,9 @@ enum Setup {
 final class SettingsModel: ObservableObject {
     @Published var pane: SettingsPane = .general
     @Published private(set) var status = HidingStatus.current
+    // Worked out once per refresh, not on every redraw.
+    @Published private(set) var steps = Setup.steps
+    var setupComplete: Bool { steps.allSatisfy(\.done) }
     @Published private(set) var isRecording = false
 
     private var keyMonitor: Any?
@@ -197,6 +200,7 @@ final class SettingsModel: ObservableObject {
 
     func refresh() {
         status = HidingStatus.current
+        steps = Setup.steps
         objectWillChange.send()
     }
 
@@ -204,10 +208,10 @@ final class SettingsModel: ObservableObject {
     // becoming active, so while the window is open and setup is unfinished,
     // look again every second.
     func startPolling() {
-        guard poll == nil, !Setup.isComplete else { return }
+        guard poll == nil, !setupComplete else { return }
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
             self?.refresh()
-            if Setup.isComplete { self?.stopPolling() }
+            if self?.setupComplete == true { self?.stopPolling() }
         }
         timer.tolerance = 0.3
         RunLoop.main.add(timer, forMode: .common)

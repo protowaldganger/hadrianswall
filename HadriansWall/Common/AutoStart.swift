@@ -32,8 +32,6 @@ enum AutoStart {
         } catch {
             NSLog("AutoStart: \(enabled ? "register" : "unregister") failed: \(error.localizedDescription)")
         }
-        let ok = service.status == (enabled ? SMAppService.Status.enabled : .notRegistered)
-        NSLog("AutoStart: status = \(service.status.rawValue)")
-        return ok
+        return service.status == (enabled ? SMAppService.Status.enabled : .notRegistered)
     }
 }
