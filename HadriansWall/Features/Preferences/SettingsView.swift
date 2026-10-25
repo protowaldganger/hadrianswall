@@ -49,7 +49,7 @@ struct SettingsView: View {
                     .padding(.bottom, 16)
             }
         }
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Style.canvas)
         .ignoresSafeArea()
     }

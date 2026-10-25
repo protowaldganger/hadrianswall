@@ -34,7 +34,13 @@ enum SettingsWindow {
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
         window.isReleasedWhenClosed = false
-        window.contentViewController = NSHostingController(rootView: SettingsView(model: model))
+        // The window, not SwiftUI, decides the size. Left to itself the hosting
+        // controller adds the title bar's height on top of the content, and
+        // since the content already runs under the title bar, that height
+        // showed up as an empty strip along the bottom.
+        let content = NSHostingController(rootView: SettingsView(model: model))
+        content.sizingOptions = []
+        window.contentViewController = content
         window.setContentSize(SettingsView.size)
         window.center()
         window.setFrameAutosaveName("WallSettings")
