@@ -11,7 +11,11 @@
 import AppKit
 import SwiftUI
 
-// The visual language shared by every protowaldganger app.
+// The visual language shared by every protowaldganger app: black and white
+// chrome in the system typeface, one grey that slides to what you pick, and
+// colour only where it carries meaning (Apple HIG, Color): system colours, so
+// light, dark and Increase Contrast adapt for free; each colour means one
+// thing in every app; and colour is never the only signal.
 enum Style {
     static let canvas = Color(nsColor: .windowBackgroundColor)
     static let raised = Color(nsColor: .controlBackgroundColor)
@@ -21,10 +25,58 @@ enum Style {
     static let ink = Color.primary.opacity(0.62)
     static let slide = Animation.spring(response: 0.3, dampingFraction: 0.86)
 
+    /// Switches, selections and default buttons: black in light mode, a quiet
+    /// grey in dark mode so white knobs and labels stay readable.
+    static let accent = Color(nsColor: NSColor(name: "protowaldganger.accent") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(white: 0.56, alpha: 1) : NSColor(white: 0.08, alpha: 1)
+    })
+
+    // Status: the same three meanings in every app.
+    /// On, done, smaller, added.
+    static let positive = Color(nsColor: .systemGreen)
+    /// Needs you, skipped, not finished setting up.
+    static let caution = Color(nsColor: .systemOrange)
+    /// Failed, removed, destructive.
+    static let negative = Color(nsColor: .systemRed)
+
+    /// Kinds of things (categories, chart series), in one fixed order so the
+    /// first kind is blue in every app. Green and red come last, so they only
+    /// appear as a kind once the others run out and never compete with status.
+    static let seriesColors: [NSColor] = [.systemBlue, .systemOrange, .systemPurple, .systemTeal, .systemPink,
+                                          .systemYellow, .systemIndigo, .systemBrown, .systemGray, .systemMint, .systemCyan,
+                                          .systemGreen, .systemRed]
+    static func series(_ index: Int) -> Color { Color(nsColor: seriesColors[index % seriesColors.count]) }
+
     static let title = Font.system(size: 24, weight: .semibold)
     static let body = Font.system(size: 13)
     static let detail = Font.system(size: 11)
     static let footer = Font.system(size: 11)
+}
+
+/// A small status dot. Its shape repeats the colour's meaning, so it reads
+/// without colour too: filled when on, a ring when off, and filled with a
+/// ring around it when something needs you.
+struct StatusDot: View {
+    enum Tone { case on, caution, off }
+    var tone: Tone
+    var size: CGFloat = 8
+
+    var body: some View {
+        ZStack {
+            switch tone {
+            case .on:
+                Circle().fill(Style.positive)
+            case .caution:
+                Circle().fill(Style.caution)
+                Circle().strokeBorder(Style.caution.opacity(0.35), lineWidth: 1).padding(-2.5)
+            case .off:
+                Circle().strokeBorder(Color.primary.opacity(0.45), lineWidth: 1.2)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
 }
 
 // A Binding straight onto Preferences; the model redraws when they change.
@@ -51,6 +103,7 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Style.canvas)
+        .tint(Style.accent)
         .ignoresSafeArea()
     }
 
@@ -63,9 +116,7 @@ struct SettingsView: View {
             }
             Spacer()
             HStack(spacing: 6) {
-                Circle()
-                    .fill(model.status.isWorking && model.setupComplete ? Color.green : Color.orange)
-                    .frame(width: 6, height: 6)
+                StatusDot(tone: model.status.isWorking && model.setupComplete ? .on : .caution, size: 6)
                 Text(model.setupComplete ? model.status.title : "Finish setting up")
                     .font(Style.detail)
                     .foregroundColor(.secondary)
@@ -235,7 +286,7 @@ private struct Checklist: View {
                 HStack(alignment: .top, spacing: 10) {
                     ZStack {
                         Circle()
-                            .fill(step.done ? Color.green : Style.track)
+                            .fill(step.done ? Style.positive : Style.track)
                             .frame(width: 20, height: 20)
                         if step.done {
                             Image(systemName: "checkmark")
@@ -354,9 +405,7 @@ private struct StatusCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Circle()
-                .fill(Color.orange)
-                .frame(width: 8, height: 8)
+            StatusDot(tone: .caution)
             VStack(alignment: .leading, spacing: 2) {
                 Text(status.title).font(.system(size: 13, weight: .semibold))
                 Text(status.detail)
@@ -405,7 +454,7 @@ private struct ShortcutPane: View {
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(model.isRecording ? Color.accentColor : Style.hairline,
+                    .strokeBorder(model.isRecording ? Color.primary : Style.hairline,
                                   style: StrokeStyle(lineWidth: model.isRecording ? 1.5 : 1, dash: model.isRecording ? [4, 3] : []))
             )
             .contentShape(Rectangle())
@@ -433,7 +482,7 @@ private struct Keycap: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 15, weight: .medium, design: .rounded))
+            .font(.system(size: 15, weight: .medium))
             .frame(minWidth: 34, minHeight: 34)
             .padding(.horizontal, text.count > 1 ? 8 : 0)
             .background(
@@ -498,12 +547,15 @@ struct MakerFooter: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Text("\(name) \(version) · by protowaldganger")
+            Text("\(name) • by protowaldganger")
             Spacer(minLength: 8)
             if let available = updates.available {
                 Link("Update \(available) available", destination: updates.releasesPage)
                     .padding(.trailing, 14)
             }
+            Text(version)
+                .foregroundStyle(.tertiary)
+                .padding(.trailing, 14)
             Button("Quit") { NSApp.terminate(nil) }
                 .buttonStyle(.plain)
         }
@@ -605,7 +657,7 @@ private struct LetterTile: View {
 
     var body: some View {
         Text(letter)
-            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .font(.system(size: 11, weight: .bold))
             .foregroundColor(selected ? Style.canvas : Style.ink)
             .frame(width: 20, height: 20)
             .background(
